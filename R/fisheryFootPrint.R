@@ -150,8 +150,9 @@ eqModel <- function(ffp)
 		spr   <- (phi.e/ageSc$phi.E)
 		ispr  <- 1.0 / spr
 
+
 		# equilibrium recruitment & sensitivity
-		re    <- max(0,theta$ro*(theta$kappa-ispr)/(theta$kappa-1))
+		re    <- max(0,ageSc$ro*(theta$kappa-ispr)/(theta$kappa-1))
 		be    <- re * phi.e
 		# dre   <- ro * phi.E * dphi.e / (phi.e^2 * (kappa-1))
 		
