@@ -17,7 +17,7 @@ run.ffp <- function(ffp)
 	# Get length-based selectivity coefficients.
 	if(with(ffp,!exists("selex"))) ffp <- getSelectivities(ffp)
 	
-	# Run the equilibriu model.
+	# Run the equilibrium model.
 	EM    <- eqModel(ffp)
 	return(EM)
 }
@@ -32,35 +32,44 @@ run.ffp <- function(ffp)
 #' @param ffp List of model parameters and age-schedule information.
 #' @param ...
 #' @export
-eqModel <- function(ffp,...)
+eqModel <- function(ffp)
 {
 	if( with(ffp,!exists("ageSc")) )
 	{
 		ffp <- getAgeSchedules(ffp)
+		with(ffp,print(theta$H))
 	}
 
 	if( with(ffp,!exists("selex")) )
 	{
 		ffp <- getSelectivities(ffp)
+		with(ffp,print(selex))
 	}
 
-	with(c(ffp$ageSc,ffp$selex,ffp$HP,ffp$MP),{
+	# with(c(ffp$theta,ffp$ageSc,ffp$selex,ffp$HP,ffp$MP),{
+	with(ffp, {
 		# ngear <- ffp$selex$ngear
-		lz  <- matrix(1/H,nrow=H,ncol=A)
-		za  <- matrix(0,nrow=H,ncol=A)
-		qa  <- array(0,dim=c(H,A,ngear))
-		pa  <- array(0,dim=c(H,A,ngear))
-		dlz <- array(0,dim=c(H,A,ngear))
+		nage  <- theta$A
+		ngear <- dim(MP)[1]
+		nsex  <- theta$H
+		va    <- as.array(selex)
+		wa    <- ageSc$wa
+		fa    <- ageSc$fa
+		lz  <- matrix(1/nsex,nrow=nsex,ncol=nage)
+		za  <- matrix(0,nrow=nsex,ncol=nage)
+		qa  <- array(0,dim=c(nsex,nage,ngear))
+		pa  <- array(0,dim=c(nsex,nage,ngear))
+		dlz <- array(0,dim=c(nsex,nage,ngear))
 
 		# Survivorship under fished conditions at fstar
-		fbar <- fstar
+		fbar <- HP$fstar
 		lambda <- rep(1.0,length=ngear)
-		for(iter in 1:4)
+		for(iter in 1:(ngear+1))
 		{
 			# total mortality and survival rates
 			fe <- fbar * lambda
 			# browser()
-			for(h in sex)
+			for(h in 1:nsex)
 			{
 				# print(fe)
 				if(dim(va)[3] > 1){
@@ -69,7 +78,7 @@ eqModel <- function(ffp,...)
 				else if(dim(va)[3] == 1){
 					fage   <- fe * va[h,,]
 				}
-				za[h,] <- mx[h,] + fage
+				za[h,] <- ageSc$mx[h,] + fage
 			}
 			sa <- exp(-za)
 			oa <- 1.0 - sa
@@ -82,10 +91,10 @@ eqModel <- function(ffp,...)
 			}
 
 			#  survivorship
-			for(j in 2:A)
+			for(j in 2:nage)
 			{
 				lz[,j] <- lz[,j-1] * sa[,j-1]
-				if(j == A)
+				if(j == nage)
 				{
 					lz[,j] <- lz[,j] / oa[,j]
 				}
@@ -103,10 +112,10 @@ eqModel <- function(ffp,...)
 
 
 			# Fmultipliers for fstar based on allocations
-			qp    <- switch(type,YPR=qa,MPR=pa)
-			ak    <- switch(type,YPR=pYPR,MPR=pMPR)
+			qp    <- switch(HP$type,YPR=qa,MPR=pa)
+			ak    <- switch(HP$type,YPR=MP$pYPR,MPR=MP$pMPR)
 			phi.t <- 0
-			for(h in sex)
+			for(h in 1:nsex)
 			{
 				phi.t <- phi.t + as.vector(lz[h,] %*% qp[h,,])
 			}
@@ -121,7 +130,7 @@ eqModel <- function(ffp,...)
 		phi.e  <- sum(lz*fa)
 		phi.q  <- phi.m <- dphi.e <- dre <- 0
 		# dphi.q <- matrix(0,ngear,ngear) 
-		for(h in sex)
+		for(h in 1:nsex)
 		{
 			# dphi.e <- dphi.e + as.vector(fa[h,] %*% dlz[h,,])
 			phi.q  <- phi.q + as.vector(lz[h,] %*% qa[h,,])
@@ -138,11 +147,11 @@ eqModel <- function(ffp,...)
 			# 	}
 			# }
 		}
-		spr   <- (phi.e/phi.E)
-		ispr  <- (phi.E/phi.e)
+		spr   <- (phi.e/ageSc$phi.E)
+		ispr  <- 1.0 / spr
 
 		# equilibrium recruitment & sensitivity
-		re    <- max(0,ro*(kappa-ispr)/(kappa-1))
+		re    <- max(0,theta$ro*(theta$kappa-ispr)/(theta$kappa-1))
 		be    <- re * phi.e
 		# dre   <- ro * phi.E * dphi.e / (phi.e^2 * (kappa-1))
 		
@@ -192,8 +201,8 @@ eqModel <- function(ffp,...)
 		            "mpr" = mpr,
 		            # "dre" = dre,
 		            # "dye" = as.vector(diag(dye)),
-		            "fstar" = fstar,
-		            "gear" = slx$sector
+		            # "fstar" = fstar,
+		            "gear" = MP$sector
 		            )
 
 		return(out)
@@ -233,23 +242,25 @@ getSelectivities <- function(ffp)
 		ffp <- getAgeSchedules(ffp)
 	}
 
-	with (ffp,{
+	with (c(ffp),{
+		nage  <- theta$A
+		nsex  <- theta$H
+		ngear <- dim(MP)[1]
 		la    <- ageSc$la
-		ngear <- dim(slx)[1]
-		va <- array(0,dim=c(H,A,ngear))
+		va <- array(0,dim=c(nsex,nage,ngear))
 		for(k in 1:ngear)
-		for(h in sex)
+		for(h in 1:nsex)
 		{
 
-			sc <- explogis(la[h,],slx$slx1[k],slx$slx2[k],slx$slx3[k])
-			sc[slx$slx4[k]:A] <- sc[slx$slx4[k]-1]
+			sc <- explogis(la[h,],MP$slx1[k],MP$slx2[k],MP$slx3[k])
+			sc[MP$slx4[k]:nage] <- sc[MP$slx4[k]-1]
 
-			ra <- plogis(la[h,],slim[k],0.1*la[h,])- plogis(la[h,],ulim[k],0.1*la[h,])
-			da <- (1-ra)*dmr[k]
+			ra <- plogis(la[h,],MP$slim[k],0.1*la[h,])- plogis(la[h,],MP$ulim[k],0.1*la[h,])
+			da <- (1-ra)*MP$dmr[k]
 			va[h,,k] <- sc*(ra+da)
 		}
 
-		ffp$selex <- list(ngear=ngear,fstar=fstar,va=va)
+		ffp$selex <- va
 		return(ffp)
 	})
 }
