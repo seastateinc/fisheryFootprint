@@ -14,81 +14,81 @@ library(ggplot2)
 # 
 # STOCK PARAMETERS
 # 
-A     <- 30					# Plus group Age
-age   <- 1:A 				# vector of ages
-H     <- 2                  # number of sexes
-sex   <- 1:H 				# vector of sex indexes (F=1,M=2)
-bo    <- 520                # unfished female spawning stock biomass (520 from 2015 assessment)
-# ro    <- 1.0            	# unfished equilibrium recruitment
-h     <- 0.95				# steepness of the B-H SRR
-kappa <- 4.0 * h / (1.0 - h)# recruitmetn compensation
-m     <- c(0.15,0.16)		# sex-specific natural mortality rate
-winf  <- c( 79.1688, 22.9836)
-linf  <- c(150.8458,102.9795)
-vbk	  <- c(  0.0795,  0.0975)
-to	  <- c(  0.5970,  1.2430)
-b	  <- 3.24
-a	  <- 0.00000692
-cm     <- c(0,0)				# power parameter for age-dependent M
+# A     <- 30					# Plus group Age
+# age   <- 1:A 				# vector of ages
+# H     <- 2                  # number of sexes
+# sex   <- 1:H 				# vector of sex indexes (F=1,M=2)
+# bo    <- 520                # unfished female spawning stock biomass (520 from 2015 assessment)
+# # ro    <- 1.0            	# unfished equilibrium recruitment
+# h     <- 0.95				# steepness of the B-H SRR
+# kappa <- 4.0 * h / (1.0 - h)# recruitmetn compensation
+# m     <- c(0.15,0.16)		# sex-specific natural mortality rate
+# winf  <- c( 79.1688, 22.9836)
+# linf  <- c(150.8458,102.9795)
+# vbk	  <- c(  0.0795,  0.0975)
+# to	  <- c(  0.5970,  1.2430)
+# b	  <- 3.24
+# a	  <- 0.00000692
+# cm     <- c(0,0)				# power parameter for age-dependent M
 
-ahat  <- c(11.589,1000)
-ghat  <- c(1.7732,0.01)
+# ahat  <- c(11.589,1000)
+# ghat  <- c(1.7732,0.01)
 
-theta <- list(A=A,bo=bo,h=h,kappa=kappa,m=m,age=age,linf=linf,
-              winf=winf,vbk=vbk,ahat=ahat,ghat=ghat)
+# theta <- list(A=A,bo=bo,h=h,kappa=kappa,m=m,age=age,linf=linf,
+#               winf=winf,vbk=vbk,ahat=ahat,ghat=ghat)
 
-# halibut <- theta
+# # halibut <- theta
 
-# 
-# SELECTIVITY PARAMETERS - need to change these to the data given by ian
-# slx1 -> Length at 50% selectivity.
-# slx2 -> STD in length-at-50% selectivity.
-# slx3 -> Shape parameter for exponential logistic (0-1, where 0=asymptotic)
-# slx4 -> asymptote age.
-# slim -> minimum size limit for each gear.
-# dmr  -> Discard mortality rates for each gear.
-glbl <- c("IFQ","PSC","SPT","PER")
+# # 
+# # SELECTIVITY PARAMETERS - need to change these to the data given by ian
+# # slx1 -> Length at 50% selectivity.
+# # slx2 -> STD in length-at-50% selectivity.
+# # slx3 -> Shape parameter for exponential logistic (0-1, where 0=asymptotic)
+# # slx4 -> asymptote age.
+# # slim -> minimum size limit for each gear.
+# # dmr  -> Discard mortality rates for each gear.
+# glbl <- c("IFQ","PSC","SPT","PER")
 
-#sel from Ian's assessment
-slx1 <- c(68.326,38.409,69.838,69.838)
-slx2 <- c(3.338,4.345,5.133,5.133)
-slx3 <- c(0.000,0.072,0.134,0.134)
-slx4 <- c(30,16,16,16)
-slim <- c(82,00,82,00)
-ulim <- c(254,254,254,254)
-dmr  <- c(0.16,0.80,0.20,0.00)
-slx  <- data.frame(sector=glbl,slx1=slx1,slx2=slx2,slx3=slx3,slx4=slx4)
+# #sel from Ian's assessment
+# slx1 <- c(68.326,38.409,69.838,69.838)
+# slx2 <- c(3.338,4.345,5.133,5.133)
+# slx3 <- c(0.000,0.072,0.134,0.134)
+# slx4 <- c(30,16,16,16)
+# slim <- c(82,00,82,00)
+# ulim <- c(254,254,254,254)
+# dmr  <- c(0.16,0.80,0.20,0.00)
+# slx  <- data.frame(sector=glbl,slx1=slx1,slx2=slx2,slx3=slx3,slx4=slx4)
 
-sel1 <- slx[1,]
-# aYPR -> Yield per recruit allocations.
-aYPR <- c(0.66,0.18,0.14,0.02)
-# aYPR <- c(0.666541,0.177337,0.134677,0.021445)
-# aMPR -> Mortality per recruit allocations.
-# aMPR <- c(0.43443443,0.43043043,0.12012012,0.01501502)
-aMPR <- c(0.43856475,0.42604559,0.11420931,0.02118035)
+# sel1 <- slx[1,]
+# # aYPR -> Yield per recruit allocations.
+# aYPR <- c(0.66,0.18,0.14,0.02)
+# # aYPR <- c(0.666541,0.177337,0.134677,0.021445)
+# # aMPR -> Mortality per recruit allocations.
+# # aMPR <- c(0.43443443,0.43043043,0.12012012,0.01501502)
+# aMPR <- c(0.43856475,0.42604559,0.11420931,0.02118035)
 
-# fixed PSC limit for status quo
-pscLimit  = c(NA,7.75,NA,NA)
+# # fixed PSC limit for status quo
+# pscLimit  = c(NA,7.75,NA,NA)
 
-# MANAGEMENT PROCEDURES
-fstar <- 0.107413
-sprTarget <- 0.45
-MP0   <- list(	fstar     = fstar,
-				slx       = slx,
-				pYPR      = aYPR/sum(aYPR),
-				pMPR      = aMPR/sum(aMPR),
-				pscLimit  = pscLimit,
-				slim      = slim,
-				ulim      = ulim,
-				dmr       = dmr,
-				sprTarget = sprTarget,
-				type      = "YPR")
+# # MANAGEMENT PROCEDURES
+# fstar <- 0.107413
+# sprTarget <- 0.45
+# MP0   <- list(	fstar     = fstar,
+# 				slx       = slx,
+# 				pYPR      = aYPR/sum(aYPR),
+# 				pMPR      = aMPR/sum(aMPR),
+# 				pscLimit  = pscLimit,
+# 				slim      = slim,
+# 				ulim      = ulim,
+# 				dmr       = dmr,
+# 				sprTarget = sprTarget,
+# 				type      = "YPR")
 
-#NEW DATA STRUCTURE
-	# ffp <- list(theta,MP,HP)
-MP 		<- data.frame(cbind(slx,slim,ulim,dmr,pscLimit,pYPR=aYPR,pMPR=aMPR))
-HP      <- list(fstar=fstar,sprTarget=sprTarget,type="YPR")
-halibut <- list(theta=theta,MP=MP,HP=HP)
+# #NEW DATA STRUCTURE
+# 	# ffp <- list(theta,MP,HP)
+# MP 		<- data.frame(cbind(slx,slim,ulim,dmr,pscLimit,pYPR=aYPR,pMPR=aMPR))
+# HP      <- list(fstar=fstar,sprTarget=sprTarget,type="YPR")
+# halibut <- list(theta=theta,MP=MP,HP=HP)
 
 
 
@@ -527,8 +527,8 @@ yieldEquivalence <- function(MP)
 	# M0 <- run(MP0)
 ##
 ##	# status quo scenario (Fixed PSC limit)
-	MP0 <- getFstar(MP0)
-	M0  <- run(MP0)
+	# MP0 <- getFstar(MP0)
+	# M0  <- run(MP0)
 ##
 ##	# Fixed PSC limit with excluder 1
 ##	MP1 <- getFstar(MP1)

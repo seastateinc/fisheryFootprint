@@ -9,20 +9,16 @@
 #' Run the Equilibrium Model
 #' @param MP A list object containing the list of model parameters and selectivity parameters.
 #' @export
-run.ffp <- function(MP)
+run.ffp <- function(ffp)
 {
 	# Compute age-schedule information.
-	if(with(MP,!exists("ageSc"))) MP <- getAgeSchedules(MP)
+	if(with(ffp,!exists("ageSc"))) ffp <- getAgeSchedules(ffp)
 
 	# Get length-based selectivity coefficients.
-	if(with(MP,!exists("selex"))) MP <- getSelectivities(MP)
-
-	# Establish allocations for YPR or MPR methods.
-	# selex$pYPR <- MP$pYPR
-	# selex$pMPR <- MP$pMPR
+	if(with(ffp,!exists("selex"))) ffp <- getSelectivities(ffp)
 	
 	# Run the equilibriu model.
-	EM    <- eqModel(theta,selex,type=MP$type)
+	EM    <- eqModel(ffp)
 	return(EM)
 }
 
@@ -30,16 +26,26 @@ run.ffp <- function(MP)
 
 # 
 # EQUILIBRIUM MODEL
+# eqModel <- function(theta,selex,type="YPR")
 # 
 #' Equilibrium age- sex-structured model for multiple fleets.
 #' @param ffp List of model parameters and age-schedule information.
 #' @param ...
 #' @export
-# eqModel <- function(theta,selex,type="YPR")
 eqModel <- function(ffp,...)
 {
+	if( with(ffp,!exists("ageSc")) )
+	{
+		ffp <- getAgeSchedules(ffp)
+	}
 
-	with(ffp,{
+	if( with(ffp,!exists("selex")) )
+	{
+		ffp <- getSelectivities(ffp)
+	}
+
+	with(c(ffp$ageSc,ffp$selex,ffp$HP,ffp$MP),{
+		# ngear <- ffp$selex$ngear
 		lz  <- matrix(1/H,nrow=H,ncol=A)
 		za  <- matrix(0,nrow=H,ncol=A)
 		qa  <- array(0,dim=c(H,A,ngear))
@@ -259,7 +265,7 @@ getSelectivities <- function(ffp)
 #' @export
 getAgeSchedules <- function(ffp)
 {
-	with(ffp,{
+	with(ffp$theta,{
 		# Length-at-age, weight-at-age, mature weight-at-age
 		vonb <- function(age,linf,k,to) {return( linf*(1-exp(-k*(age+to))) )}
 		la <- sapply(age,vonb,linf=linf,k=vbk,to=to)
