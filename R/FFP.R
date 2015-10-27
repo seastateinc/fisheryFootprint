@@ -7,6 +7,7 @@
 # TODO
 # -[X] Change algorithm to estimate fbar only.
 # --------------------------------------------------------------------------- #
+# library(fisheryFootprint)
 library(dplyr)
 library(ggplot2)
 
@@ -36,6 +37,7 @@ ghat  <- c(1.7732,0.01)
 theta <- list(A=A,bo=bo,h=h,kappa=kappa,m=m,age=age,linf=linf,
               winf=winf,vbk=vbk,ahat=ahat,ghat=ghat)
 
+# halibut <- theta
 
 # 
 # SELECTIVITY PARAMETERS - need to change these to the data given by ian
@@ -81,6 +83,14 @@ MP0   <- list(	fstar     = fstar,
 				dmr       = dmr,
 				sprTarget = sprTarget,
 				type      = "YPR")
+
+#NEW DATA STRUCTURE
+	# ffp <- list(theta,MP,HP)
+MP 		<- data.frame(cbind(slx,slim,ulim,dmr,pscLimit,pYPR=aYPR,pMPR=aMPR))
+HP      <- list(fstar=fstar,sprTarget=sprTarget,type="YPR")
+halibut <- list(theta=theta,MP=MP,HP=HP)
+
+
 
 ##MP1 <- MP2 <- AB0 <- JRG0 <- JRG1 <- JRG2 <- MP0
 ##MP1$slx$slx3[2] = 0.1
@@ -512,13 +522,13 @@ yieldEquivalence <- function(MP)
 
 
 ##main <- {
-##	# fspr <- exp(getFspr(MP0)$par)
-##	# MP0$fstar = fspr
-##	# M0 <- run(MP0)
+	# fspr <- exp(getFspr(MP0)$par)
+	# MP0$fstar = fspr
+	# M0 <- run(MP0)
 ##
 ##	# status quo scenario (Fixed PSC limit)
-##	MP0 <- getFstar(MP0)
-##	M0  <- run(MP0)
+	MP0 <- getFstar(MP0)
+	M0  <- run(MP0)
 ##
 ##	# Fixed PSC limit with excluder 1
 ##	MP1 <- getFstar(MP1)

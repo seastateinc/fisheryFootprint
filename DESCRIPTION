@@ -1,8 +1,9 @@
 Package: fisheryFootprint
-Title: What the Package Does (one line, title case)
+Title: Harvest policy development tool for SPR-based reference points.
 Version: 0.0.0.9000
-Authors@R: person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
+Authors@R: person("Steven", "Martell", email = "martell.steve@gmail.com", role = c("aut", "cre"))
 Description: What the package does (one paragraph).
 Depends: R (>= 3.2.0)
 License: What license is it under?
 LazyData: true
+Suggests: testthat
