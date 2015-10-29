@@ -38,7 +38,7 @@ run.ffp <- function(ffp)
 #' @param sprTarget Target SPR reference point for FSPR calculations
 #' @param fmax Maximum value for Fstar to profile over.
 #' @export
-run.prf <- function(ffp,sprTarget=0.4,fmax=0.45)
+run.prf <- function(ffp,sprTarget=0.4,fmax=0.45,model=NULL)
 {
 	ftry <- seq(0,fmax,length=100)
 	ffp$HP$sprTarget = sprTarget
@@ -51,11 +51,7 @@ run.prf <- function(ffp,sprTarget=0.4,fmax=0.45)
 	
 	runs <- lapply(ftry,fn)
 	df   <- ldply(runs,data.frame)
-
-	# p <- ggplot(df,aes(fstar,ye))
-	# p <- p + geom_area(aes(fill=gear),alpha=0.50)
-	# p <- p + labs(x="F*",y="Equilibrium yield")
-	# print(p)
+	if(!is.null(model)) df$model <- model
 	class(df) <- c("prf",class(df))
 	return(df)
 }
