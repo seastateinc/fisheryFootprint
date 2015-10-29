@@ -3,5 +3,7 @@
 export(eqModel)
 export(explogis)
 export(getAgeSchedules)
+export(getFstar)
 export(getSelectivities)
 export(run.ffp)
+export(run.prf)

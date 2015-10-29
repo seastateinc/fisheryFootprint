@@ -5,6 +5,18 @@
 #	getSelectivities
 # 	eqModel
 
+#' Calculate the corresponding Fspr given SPR target
+#' @param ffp List of model parameters and age-schedule information.
+#' @export
+getFstar <- function(ffp)
+{
+	if( any(!is.na(ffp$MP$pscLimit)) ){
+		cat("\n PSC LIMIT\n")
+	}
+	else{
+		cat("\n NO PSC LIMIT\n")		
+	}
+}
 
 #' Run the Equilibrium Model
 #' @param MP A list object containing the list of model parameters and selectivity parameters.
@@ -22,7 +34,41 @@ run.ffp <- function(ffp)
 	return(EM)
 }
 
+#' Run profile over fstar for given allocations
+#' @param sprTarget Target SPR reference point for FSPR calculations
+#' @param fmax Maximum value for Fstar to profile over.
+#' @export
+run.prf <- function(ffp,sprTarget=0.4,fmax=0.45)
+{
+	ftry <- seq(0,fmax,length=100)
+	ffp$HP$sprTarget = sprTarget
+	fn <- function(ftry)
+	{
+		ffp$HP$fstar <- ftry
+		em <- run.ffp(ffp)
+		return(em)
+	}
+	
+	runs <- lapply(ftry,fn)
+	df   <- ldply(runs,data.frame)
 
+	# p <- ggplot(df,aes(fstar,ye))
+	# p <- p + geom_area(aes(fill=gear),alpha=0.50)
+	# p <- p + labs(x="F*",y="Equilibrium yield")
+	# print(p)
+	class(df) <- c("prf",class(df))
+	return(df)
+}
+
+#' Plot yield profile
+#' @export
+plot.prf <- function(df)
+{
+	p <- ggplot(df,aes(fstar,ye))
+	p <- p + geom_area(aes(fill=gear),alpha=0.50)
+	p <- p + labs(x="F*",y="Equilibrium yield")
+	print(p)
+}
 
 # 
 # EQUILIBRIUM MODEL
@@ -37,13 +83,13 @@ eqModel <- function(ffp)
 	if( with(ffp,!exists("ageSc")) )
 	{
 		ffp <- getAgeSchedules(ffp)
-		with(ffp,print(theta$H))
+		# with(ffp,print(theta$H))
 	}
 
 	if( with(ffp,!exists("selex")) )
 	{
 		ffp <- getSelectivities(ffp)
-		with(ffp,print(selex))
+		# with(ffp,print(selex))
 	}
 
 	# with(c(ffp$theta,ffp$ageSc,ffp$selex,ffp$HP,ffp$MP),{
@@ -202,7 +248,7 @@ eqModel <- function(ffp)
 		            "mpr" = mpr,
 		            # "dre" = dre,
 		            # "dye" = as.vector(diag(dye)),
-		            # "fstar" = fstar,
+		            "fstar" = fbar,
 		            "gear" = MP$sector
 		            )
 
