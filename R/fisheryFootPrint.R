@@ -12,10 +12,78 @@ getFstar <- function(ffp)
 {
 	if( any(!is.na(ffp$MP$pscLimit)) ){
 		cat("\n PSC LIMIT\n")
+		ffp <- getFsprPSC(ffp)
 	}
 	else{
-		cat("\n NO PSC LIMIT\n")		
+		cat("\n NO PSC LIMIT\n")
+		ffp <- getFspr(ffp)	
 	}
+	return(ffp)
+}
+
+
+#' Find the F* that is consistent with SPR target and PSC limits.
+#' @param ffp List of model parameters and age-schedule information.
+#' @details  This algorithm finds the value of F* that is consistent with
+#' the sprTarget and one or more fixed PSC limits.  Must also determine
+#' what type of allocation is being used (YPR or MPR) for setting allocations.
+#' @export
+getFsprPSC <- function(ffp)
+{
+	with(ffp,{
+		ak    <- switch(HP$type,YPR=MP$pYPR,MPR=MP$pMPR)
+		bGear <- !is.na(MP$pscLimit)
+		iGear <- which(!is.na(MP$pscLimit))
+		pk    <- ak[!bGear]/sum(ak[!bGear])
+
+		getFootPrint <- function(phi)
+		{
+			tmp        <- ak
+			tmp[bGear] <- phi[-1]
+			tmp[!bGear]<- (1-sum(tmp[bGear]))*pk
+			return(tmp)
+		}
+
+		# Objective function
+		fn <- function(phi)
+		{
+			ffp$HP$fstar <- exp(phi[1])
+			ffp$MP$pYPR  <- getFootPrint(phi)
+
+			EM       <- run.ffp(ffp)
+			spr  	 <- EM$spr
+			psc      <- EM$ye
+			
+			ofn   	 <- (spr-ffp$HP$sprTarget)^2 + 
+						10*sum(na.omit((psc-ffp$MP$pscLimit)^2))
+			return(ofn)
+		}
+		params <- c(log(HP$fstar),ak[iGear])
+		fit    <- nlminb(params,fn)
+
+		ffp$HP$fstar <- exp(fit$par[1])
+		if(ffp$HP$type=="YPR") ffp$MP$pYPR <- getFootPrint(fit$par)
+		if(ffp$HP$type=="MPR") ffp$MP$pMPR <- getFootPrint(fit$par)	
+		return(ffp)
+	})
+}
+
+#' Find the F* that is consistent with SPR target given allocations.
+#' @param ffp List of model parameters and age-schedule information.
+#' @export
+getFspr <- function(ffp)
+{
+	fn <- function(log.fspr)
+	{
+		ffp$HP$fstar <- exp(log.fspr)
+		spr          <- run.ffp(ffp)$spr
+		ofn          <- (spr-ffp$HP$sprTarget)^2
+		return(ofn)
+	}
+	fit <- nlminb(log(ffp$HP$fstar),fn)
+	ffp$HP$fstar <- exp(fit$par)
+	return(ffp)
+
 }
 
 #' Run the Equilibrium Model
@@ -50,7 +118,7 @@ run.prf <- function(ffp,sprTarget=0.4,fmax=0.45,model=NULL)
 	}
 	
 	runs <- lapply(ftry,fn)
-	df   <- ldply(runs,data.frame)
+	df   <- plyr::ldply(runs,data.frame)
 	if(!is.null(model)) df$model <- model
 	class(df) <- c("prf",class(df))
 	return(df)
@@ -58,6 +126,7 @@ run.prf <- function(ffp,sprTarget=0.4,fmax=0.45,model=NULL)
 
 #' Plot yield profile
 #' @export
+#' @method plot prf
 plot.prf <- function(df)
 {
 	p <- ggplot(df,aes(fstar,ye))
@@ -206,6 +275,10 @@ eqModel <- function(ffp)
 		mpr   <- fe * phi.m
 		me    <- re * mpr
 		
+		# halibut per ton (metric for catch composition)
+		hpt   <- floor(2204.62/(ypr/mpr))
+		
+
 		# Jacobian for yield
 		# dye <- matrix(0,nrow=ngear,ncol=ngear)
 		# for(k in 1:ngear)
@@ -234,6 +307,8 @@ eqModel <- function(ffp)
 
 		# Equilibrium Model output
 		out <- list(
+		            "gear" = MP$sector,
+		            "fstar" = fbar,
 		            "fe"  = fe,
 		            "ye"  = ye,
 		            "me"  = me,
@@ -244,8 +319,7 @@ eqModel <- function(ffp)
 		            "mpr" = mpr,
 		            # "dre" = dre,
 		            # "dye" = as.vector(diag(dye)),
-		            "fstar" = fbar,
-		            "gear" = MP$sector
+		            "hpt"  = hpt
 		            )
 
 		return(out)

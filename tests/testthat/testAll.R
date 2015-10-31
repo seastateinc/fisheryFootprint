@@ -10,17 +10,18 @@ test_that("Check Functions",{
 	expect_output(str(tst2),"List of 5")
 
 	tst3 <- eqModel(halibut)
-	expect_output(str(tst3),"List of 10")
+	expect_output(str(tst3),"List of 11")
 
 })
 
 test_that("Profile Fstar",{
 	prf1 <- run.prf(halibut)
-	expect_output(str(prf1),"'data.frame':	400 obs. of  10 variables:")
+	expect_output(str(prf1),"Classes ‘prf’ and 'data.frame':	400 obs. of  11 variables:")
 
 })
 
 test_that("Halibut Model",{
+	halibut$theta$h <- 0.75
 	M1 <- M2 <- M3 <- M4 <- halibut
 	M1$MP$slim <- c(81.3,0.00,81.3,0.00)
 	M2$MP$slim <- c(76.2,0.00,76.2,0.00)
@@ -36,13 +37,18 @@ test_that("Halibut Model",{
 	df <- rbind(P1,P2,P3,P4)
 
 	# data frame for arrow position at F_SPR target
-	
-	ap <- df %>% filter(spr>=0.4) %>% group_by(model,gear)%>% select(fe,ye) %>% slice(n())
-	p <- ggplot(df,aes(spr,mpr))
-	p <- p + geom_area(aes(fill=gear),alpha=0.5) 
+	ap <- df %>% filter(spr>=0.4) %>% 
+		  group_by(model,gear)%>% 
+		  select(spr,ye,fe) %>% 
+		  slice(n())
+
+	p <- ggplot(df,aes(spr,ye))
+	p <- p + geom_line(aes(color=model),alpha=0.8) 
 	p <- p + labs(x="Total Fishing Mortality (FSPR)")
-	p <- p + geom_vline(xintercept=M1$HP$sprTarget,size=0.5)
-	p <- p + facet_wrap(~model)
-	print(p)
+	# p <- p + geom_vline(xintercept=M1$HP$sprTarget,size=0.5)
+	p <- p + facet_wrap(~gear,scales="free") + 
+	# theme(panel.margin=grid::unit(0,"lines")) +
+    geom_text(data=ap, aes(label=round(ye,1), x=spr, y=ye),position="stack", size=3)
+	print(p + theme_bw())
 
 })

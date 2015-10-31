@@ -4,7 +4,11 @@ Version: 0.0.0.9000
 Authors@R: person("Steven", "Martell", email = "martell.steve@gmail.com", role = c("aut", "cre"))
 Description: What the package does (one paragraph).
 Depends: R (>= 3.2.0)
-Imports: plyr, ggplot2
+Imports: 
+	plyr, 
+	dplyr, 
+	ggplot2, 
+	grid
 License: What license is it under?
 LazyData: true
 Suggests: testthat
