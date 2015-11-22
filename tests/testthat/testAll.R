@@ -10,13 +10,13 @@ test_that("Check Functions",{
 	expect_output(str(tst2),"List of 5")
 
 	tst3 <- eqModel(halibut)
-	expect_output(str(tst3),"List of 11")
+	expect_output(str(tst3),"List of 12")
 
 })
 
 test_that("Profile Fstar",{
 	prf1 <- run.prf(halibut)
-	expect_output(str(prf1),"Classes ‘prf’ and 'data.frame':	400 obs. of  11 variables:")
+	expect_output(str(prf1),"Classes ‘prf’ and 'data.frame':	400 obs. of  12 variables:")
 
 })
 

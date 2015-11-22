@@ -4,6 +4,50 @@
 # 	explogis
 #	getSelectivities
 # 	eqModel
+#   yieldEquivalence
+
+
+
+#' Calculate the equivalent yield by sequentially removing each fishery.
+#' @param ffp List of model parameters and age-schedule information.
+#' @export
+yieldEquivalence <- function(ffp)
+{
+
+		G 	<- length(ffp$MP$pYPR)
+		x   <- rep(1,length=G)
+		D 	<- rbind(rep(1,length=G),1-diag(1,G))
+
+		fn 	<- function(x){
+			ffp$MP$pscLimit <- NA
+			if(ffp$HP$type=="YPR"){
+				ak  	<- x * ffp$MP$pYPR
+				ffp$MP$pYPR <- ak / sum(ak)
+			}
+			if(ffp$HP$type=="MPR"){
+				ak  	<- x * ffp$MP$pMPR
+				ffp$MP$pMPR <- ak / sum(ak)
+			}
+
+			ffp 	<- getFstar(ffp)
+			cat("\n Fstar = ",ffp$HP$fstar,"\n")
+			EM 		<- eqModel(ffp)
+			EM$x    <- x
+			return(EM)
+		}
+
+		XX 	<- apply(D,1,fn)
+		df  <- ldply(XX,data.frame)
+		Y   <- matrix(df$ye,ncol=G,byrow=TRUE)
+		y  	<- Y[1,]
+		M   <- Y[-1,]
+		E  	<- t((t(M)-y)/y)
+		E[E==-1] <- NA
+		out <- list(E=E,Y=Y)
+		return(out)
+}
+
+
 
 #' Calculate the corresponding Fspr given SPR target
 #' @param ffp List of model parameters and age-schedule information.
@@ -31,7 +75,7 @@ getFstar <- function(ffp)
 getFsprPSC <- function(ffp)
 {
 	with(ffp,{
-		ak    <- switch(HP$type,YPR=MP$pYPR,MPR=MP$pMPR)
+		ak    <- switch(HP$type,YPR=MP$pYPR,MPR=MP$pMPR,FPR=MP$pFPR)
 		bGear <- !is.na(MP$pscLimit)
 		iGear <- which(!is.na(MP$pscLimit))
 		pk    <- ak[!bGear]/sum(ak[!bGear])
@@ -48,7 +92,11 @@ getFsprPSC <- function(ffp)
 		fn <- function(phi)
 		{
 			ffp$HP$fstar <- exp(phi[1])
-			ffp$MP$pYPR  <- getFootPrint(phi)
+			# ffp$MP$pYPR  <- getFootPrint(phi)
+			tmp  <- getFootPrint(phi)
+			if(HP$type=="YPR") ffp$MP$pYPR = tmp
+			if(HP$type=="MPR") ffp$MP$pMPR = tmp
+			if(HP$type=="FPR") ffp$MP$pFPR = tmp
 
 			EM       <- run.ffp(ffp)
 			spr  	 <- EM$spr
@@ -60,6 +108,7 @@ getFsprPSC <- function(ffp)
 		}
 		params <- c(log(HP$fstar),ak[iGear])
 		fit    <- nlminb(params,fn)
+		print(fn(fit$par))
 
 		ffp$HP$fstar <- exp(fit$par[1])
 		if(ffp$HP$type=="YPR") ffp$MP$pYPR <- getFootPrint(fit$par)
@@ -170,6 +219,7 @@ eqModel <- function(ffp)
 		za  <- matrix(0,nrow=nsex,ncol=nage)
 		qa  <- array(0,dim=c(nsex,nage,ngear))
 		pa  <- array(0,dim=c(nsex,nage,ngear))
+		ra  <- array(0,dim=c(nsex,nage,ngear))
 		dlz <- array(0,dim=c(nsex,nage,ngear))
 
 		# Survivorship under fished conditions at fstar
@@ -197,8 +247,9 @@ eqModel <- function(ffp)
 			# per recruit yield & numbers for gear k
 			for(k in 1:ngear)
 			{
-				qa[,,k] <- va[,,k] * wa * oa / za
 				pa[,,k] <- va[,,k] * oa / za
+				qa[,,k] <- va[,,k] * wa * oa / za
+				ra[,,k] <- va[,,k] * fa * oa / za
 			}
 
 			#  survivorship
@@ -223,12 +274,13 @@ eqModel <- function(ffp)
 
 
 			# Fmultipliers for fstar based on allocations
-			qp    <- switch(HP$type,YPR=qa,MPR=pa)
-			ak    <- switch(HP$type,YPR=MP$pYPR,MPR=MP$pMPR)
+			qp    <- switch(HP$type,YPR=qa,MPR=pa,FPR=ra)
+			ak    <- switch(HP$type,YPR=MP$pYPR,MPR=MP$pMPR,FPR=MP$pFPR)
 			phi.t <- 0
 			for(h in 1:nsex)
 			{
 				phi.t <- phi.t + as.vector(lz[h,] %*% qp[h,,])
+				# phi.t <- phi.t + as.vector((lz[h,]*fa[h,]) %*% qp[h,,])
 			}
 			
 			
@@ -239,13 +291,14 @@ eqModel <- function(ffp)
 
 		# incidence functions
 		phi.e  <- sum(lz*fa)
-		phi.q  <- phi.m <- dphi.e <- dre <- 0
+		phi.q  <- phi.m <- phi.r <- dphi.e <- dre <- 0
 		# dphi.q <- matrix(0,ngear,ngear) 
 		for(h in 1:nsex)
 		{
 			# dphi.e <- dphi.e + as.vector(fa[h,] %*% dlz[h,,])
 			phi.q  <- phi.q + as.vector(lz[h,] %*% qa[h,,])
 			phi.m  <- phi.m + as.vector(lz[h,] %*% pa[h,,])
+			phi.r  <- phi.r + as.vector(lz[h,] %*% ra[h,,])
 			# derivatives for yield equivalence
 			# for(k in 1:ngear)
 			# {
@@ -274,9 +327,15 @@ eqModel <- function(ffp)
 		# mortality per recruit and mortality
 		mpr   <- fe * phi.m
 		me    <- re * mpr
+
+		# spawning capital per recruit
+		bpr   <- fe * phi.r
 		
 		# halibut per ton (metric for catch composition)
 		hpt   <- floor(2204.62/(ypr/mpr))
+
+		# fishery footprint
+		footprint <- mpr/sum(mpr)*(1-HP$sprTarget)
 		
 
 		# Jacobian for yield
@@ -317,9 +376,9 @@ eqModel <- function(ffp)
 		            "spr" = spr,
 		            "ypr" = ypr,
 		            "mpr" = mpr,
-		            # "dre" = dre,
-		            # "dye" = as.vector(diag(dye)),
-		            "hpt"  = hpt
+		            "bpr" = bpr,
+		            "hpt"  = hpt,
+		            "footprint" = footprint
 		            )
 
 		return(out)
