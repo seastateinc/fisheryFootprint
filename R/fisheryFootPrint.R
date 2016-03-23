@@ -41,7 +41,7 @@ yieldEquivalence <- function(ffp)
 		Y   <- matrix(df$ye,ncol=G,byrow=TRUE)
 		y  	<- Y[1,]
 		M   <- Y[-1,]
-		E  	<- t((t(M)-y)/y)
+		E  	<- t(t(M)-y)/y
 		E[E==-1] <- NA
 		out <- list(E=E,Y=Y)
 		return(out)
